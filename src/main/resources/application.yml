@@ -1,1 +1,28 @@
-spring.application.name=university-user-service
+server:
+  port: 8081
+
+spring:
+  application:
+    name: university-user-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8080/realms/university-app/protocol/openid-connect/certs
+      client:
+        registration:
+          keycloak:
+            client-id: api-admin-client
+            client-secret: { add the client secret value here }
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile, email
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/university-app
+
+keycloak:
+  server-url: http://localhost:8080
+  realm: university-app
+  client-id: api-admin-client
+  client-secret: { Add the client secret value here }
