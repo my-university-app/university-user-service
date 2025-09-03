@@ -1,0 +1,13 @@
+client funcionando com permissão de criar usuários:
+
+Suba o Keycloak com esse JSON corrigido.
+
+No Admin Console:
+
+Vá em Clients → user-admin-client → Service Account Roles.
+
+Selecione o client realm-management.
+
+Adicione as roles manage-users e view-users.
+
+Agora sim o user-admin-client vai conseguir criar usuários via Postman usando client credentials flow.

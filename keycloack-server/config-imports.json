@@ -3,20 +3,25 @@
   "enabled": true,
   "clients": [
     {
-      "clientId": "user-service",
+      "clientId": "user-manager-client",
+      "name": "User Manager Client",
+      "description": "Client para gerenciar usuários via API",
       "enabled": true,
       "protocol": "openid-connect",
-      "clientAuthenticatorType": "client-secret",
-      "secret": "user-service-secret",
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": true,
       "publicClient": false,
-      "redirectUris": [
-        "http://localhost:8081/*"
-      ],
-      "webOrigins": ["*"],
-      "defaultClientScopes": ["email", "profile"]
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "SUA-SENHA-SECRETA-AQUI",
+      "redirectUris": [],
+      "defaultClientScopes": ["email", "profile"],
+      "optionalClientScopes": ["address", "phone"],
+      "attributes": {
+        "use.refresh.tokens": "true"
+      },
+      "fullScopeAllowed": false
     }
   ],
   "roles": {
