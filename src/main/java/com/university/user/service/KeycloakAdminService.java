@@ -1,25 +1,28 @@
 package com.university.user.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.university.user.dto.UserRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 
 @Service
 @RequiredArgsConstructor
 public class KeycloakAdminService {
+    final Logger log =  LoggerFactory.getLogger(KeycloakAdminService.class);
 
-  private final KeycloakAPI keycloakAPI;
+   private final KeycloakAPI keycloakAPI;
 
    public void createStudentUser(UserRequest userRequest) throws JsonProcessingException {
-       String token = keycloakAPI.getAdminAccessToken();
 
+       log.info("Starting the create new user");
+       String token = keycloakAPI.getAdminAccessToken();
+       log.info("Generate new token of the keycloack: "+ token);
+       log.info("The new user : "+ userRequest.toString());
        keycloakAPI.createUser(token, userRequest);
     }
 
