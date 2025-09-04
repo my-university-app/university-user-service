@@ -3,6 +3,7 @@ package com.university.user.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.university.user.dto.UserRequest;
+import com.university.user.exception.UserExistException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -23,6 +24,12 @@ public class KeycloakAdminService {
        String token = keycloakAPI.getAdminAccessToken();
        log.info("Generate new token of the keycloack: "+ token);
        log.info("The new user : "+ userRequest.toString());
+
+//       Only to try this function to get error message in body's response
+//       if(true){
+//           throw new UserExistException("The user exist in DB: "+ userRequest.getEmail());
+//       }
+
        keycloakAPI.createUser(token, userRequest);
     }
 
