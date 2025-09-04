@@ -11,11 +11,16 @@ import com.university.user.util.ConverterJSON;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class KeycloakAPI {
+    private static final Logger log = LoggerFactory.getLogger(KeycloakAPI.class);
     private static String URI_TOKEN = "/realms/%s/protocol/openid-connect/token";
     private static String BODY_TOKEN = "grant_type=client_credentials&client_id={CLIENT_ID}&client_secret={CLIENT_SECRET}";
     private static String URI_USER = "/admin/realms/{REALM}/users";
@@ -34,6 +39,7 @@ public class KeycloakAPI {
             @Value("${keycloak.client-id}") String clientId,
             @Value("${keycloak.client-secret}") String clientSecret
     ) {
+        log.info("KeycloakAPI initialized");
         this.webClient = WebClient.builder().baseUrl(serverUrl).build();
         this.serverUrl = serverUrl;
         this.realm = realm;
@@ -73,9 +79,8 @@ public class KeycloakAPI {
                 .credentials(list)
                 .build();
 
-        System.out.println("USer JSON: "+ ConverterJSON.toString(user));
-        JsonNode res =  executePost(url, authorizationToken, ConverterJSON.toString(user));
-        System.out.println("JSON Resposta: "+ mapper.writeValueAsString(res));
+        executePost(url, authorizationToken, ConverterJSON.toString(user));
+
     }
 
 
@@ -89,14 +94,22 @@ public class KeycloakAPI {
                 .block();
     }
 
-    private JsonNode executePost(String uri,String token, String body){
+    private String executePost(String uri,String token, String body){
         return webClient.post()
                 .uri(uri)
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
-                .retrieve()
-                .bodyToMono(JsonNode.class)
+                .exchangeToMono( response -> {
+                    if(response.statusCode().is2xxSuccessful()){
+                        String location = response.headers().asHttpHeaders().getFirst("Location");
+                        log.info("User created successfully. Location {}", location);
+                        return Mono.just(location);
+                    } else {
+                        log.error("Failed to create the user. status: {}", response.statusCode());
+                        return response.bodyToMono(String.class);
+                    }
+                })
                 .block();
     }
 }
