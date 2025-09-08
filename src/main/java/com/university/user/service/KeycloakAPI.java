@@ -10,6 +10,7 @@ import com.university.user.util.ConverterJSON;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ public class KeycloakAPI {
     private static String URI_USER = "/admin/realms/%s/users";
     private static String URI_ROLES_SEARCH = "/admin/realms/%s/roles/%s";
     private static String URL_ROLES_ADD_USER = "/admin/realms/%s/users/%s/role-mappings/realm";
+    private static String URL_LOGIN_USER = "/realms/%s/protocol/openid-connect/token";
 
     private static String AUTHORIZATION_TOKEN = "Bearer %s";
 
@@ -122,6 +124,19 @@ public class KeycloakAPI {
         return monoResponse.block();
     }
 
+    public ResponseEntity<String> getTokenLoginByUser(String accessToken, UserLoginRequest userLoginRequest){
+
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("grant_type", "password");
+        formData.add("client_id", clientId);
+        formData.add("client_secret",clientSecret);
+        formData.add("username", userLoginRequest.getUsername());
+        formData.add("password", userLoginRequest.getPassword());
+
+        Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_LOGIN_USER, realm), accessToken, formData);
+        return monoResponse.block();
+    }
+
     private ResponseEntity<String> getRolesBySearch(String accessToken){
         return  getRolesBySearch(accessToken, "student");
     }
@@ -130,6 +145,7 @@ public class KeycloakAPI {
       Mono<ResponseEntity<String>> mono = get(String.format(URI_ROLES_SEARCH, this.realm, roleName), accessToken);
       return mono.block();
     }
+
 
     private JsonNode executeTokenPost(String uri, String body){
         return webClient.post()
@@ -147,8 +163,30 @@ public class KeycloakAPI {
                 .header("Authorization", setBearerToken(token))
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
-                .retrieve()
-                .toEntity(String.class);
+                .exchangeToMono(response ->
+                        response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(bodyStr -> ResponseEntity
+                                        .status(response.statusCode())
+                                        .headers(response.headers().asHttpHeaders())
+                                        .body(bodyStr))
+                );
+    }
+
+    private Mono<ResponseEntity<String>> post(String uri,String token, MultiValueMap<String, String> formData){
+        return webClient.post()
+                .uri(uri)
+                .header("Authorization", setBearerToken(token))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .bodyValue(formData)
+                .exchangeToMono(response ->
+                        response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(bodyStr -> ResponseEntity
+                                        .status(response.statusCode())
+                                        .headers(response.headers().asHttpHeaders())
+                                        .body(bodyStr))
+                );
     }
 
 
@@ -159,8 +197,14 @@ public class KeycloakAPI {
                         .path(uri)
                         .build())
                 .header("Authorization", setBearerToken(token))
-                .retrieve()
-                .toEntity(String.class);
+                .exchangeToMono(response ->
+                        response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(bodyStr -> ResponseEntity
+                                        .status(response.statusCode())
+                                        .headers(response.headers().asHttpHeaders())
+                                        .body(bodyStr))
+                );
     }
 
     public Mono<ResponseEntity<String>> get(String uri,String token) {
@@ -169,8 +213,14 @@ public class KeycloakAPI {
                         .path(uri)
                         .build())
                 .header("Authorization", setBearerToken(token))
-                .retrieve()
-                .toEntity(String.class);
+                .exchangeToMono(response ->
+                        response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(bodyStr -> ResponseEntity
+                                        .status(response.statusCode())
+                                        .headers(response.headers().asHttpHeaders())
+                                        .body(bodyStr))
+                );
     }
 
     private String getRealmFromURL() {
