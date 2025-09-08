@@ -4,13 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.university.user.dto.UserRequest;
+import com.university.user.dto.keycloak.RefreshTokenRequest;
 import com.university.user.dto.keycloak.UserLoginRequest;
 import com.university.user.dto.keycloak.UserTokenResponse;
 import com.university.user.exception.UserExistException;
-import com.university.user.exception.UserLoginInvalid;
+import com.university.user.exception.UserLoginInvalidException;
 import com.university.user.util.ConverterJSON;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -65,10 +65,7 @@ public class KeycloakAdminService {
 
     public UserTokenResponse getLoginByUser(UserLoginRequest userLoginRequest){
        UserTokenResponse userTokenResponse = null;
-       String token = keycloakAPI.getAdminAccessToken();
-
-       ResponseEntity<String> response = keycloakAPI.getTokenLoginByUser(token, userLoginRequest);
-
+       ResponseEntity<String> response = keycloakAPI.getTokenLoginByUser(userLoginRequest);
        HttpStatusCode statusCode = response.getStatusCode();
 
        if(statusCode.is2xxSuccessful()){
@@ -78,9 +75,27 @@ public class KeycloakAdminService {
 
        if (statusCode.is4xxClientError()){
            log.info("user invalid: "+userLoginRequest.username);
-           String message = ConverterJSON.toJSONObject(response.getBody()).get("error_description").asText();
-           throw new UserLoginInvalid(message);
+           throw new UserLoginInvalidException(getMessageByError(response));
        }
        return userTokenResponse;
+    }
+
+    public void logoutByUser(RefreshTokenRequest refreshToken){
+        UserTokenResponse userTokenResponse = null;
+        ResponseEntity<String> response = keycloakAPI.logoutByUserToken(refreshToken);
+        HttpStatusCode statusCode = response.getStatusCode();
+
+        if(statusCode.is2xxSuccessful()){
+            log.info("logout success");
+        }
+
+        if(statusCode.is4xxClientError()){
+            log.info("user refresh token invalid: "+refreshToken.getRefreshToken());
+            throw new UserLoginInvalidException(getMessageByError(response));
+        }
+    }
+
+    private String getMessageByError( ResponseEntity<String> response){
+        return ConverterJSON.toJSONObject(response.getBody()).get("error_description").asText();
     }
 }

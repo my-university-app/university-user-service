@@ -3,6 +3,7 @@ package com.university.user.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.university.user.dto.UserRequest;
 import com.university.user.dto.UserResponse;
+import com.university.user.dto.keycloak.RefreshTokenRequest;
 import com.university.user.dto.keycloak.UserLoginRequest;
 import com.university.user.service.KeycloakAdminService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +43,12 @@ public class UserController {
     @PostMapping("login")
     public ResponseEntity<?> loginUser(@Validated @RequestBody UserLoginRequest userLoginRequest) {
         return ResponseEntity.ok(keycloakAdminService.getLoginByUser(userLoginRequest));
+    }
+
+    @PostMapping("logout")
+    public ResponseEntity<?> logoutUser(@Validated @RequestBody RefreshTokenRequest refreshTokenRequest){
+        keycloakAdminService.logoutByUser(refreshTokenRequest);
+        return ResponseEntity.noContent().build();
     }
 
 }
