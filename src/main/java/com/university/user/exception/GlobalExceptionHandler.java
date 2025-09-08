@@ -1,6 +1,7 @@
 package com.university.user.exception;
 
 import com.university.user.dto.ErrorResponse;
+import com.university.user.dto.keycloak.RefreshTokenRequest;
 import jakarta.servlet.http.HttpServletRequest;
 
 
@@ -26,9 +27,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
-    @ExceptionHandler(UserLoginInvalid.class)
-    public ResponseEntity<ErrorResponse> handeUserLoginInvalid(UserLoginInvalid ex,
-                                                                  HttpServletRequest request){
+    @ExceptionHandler(UserLoginInvalidException.class)
+    public ResponseEntity<ErrorResponse> handeUserLoginInvalid(UserLoginInvalidException ex,
+                                                               HttpServletRequest request){
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+
+    @ExceptionHandler(RefreshTokenInvalidException.class)
+    public ResponseEntity<ErrorResponse> handeRefreshTokenInvalid(RefreshTokenInvalidException ex,
+                                                               HttpServletRequest request){
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 ex.getMessage(),

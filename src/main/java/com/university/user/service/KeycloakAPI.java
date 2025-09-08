@@ -30,6 +30,7 @@ public class KeycloakAPI {
     private static String URI_ROLES_SEARCH = "/admin/realms/%s/roles/%s";
     private static String URL_ROLES_ADD_USER = "/admin/realms/%s/users/%s/role-mappings/realm";
     private static String URL_LOGIN_USER = "/realms/%s/protocol/openid-connect/token";
+    private static String URL_LOGOUT_USER = "/realms/%s/protocol/openid-connect/logout";
 
     private static String AUTHORIZATION_TOKEN = "Bearer %s";
 
@@ -124,8 +125,7 @@ public class KeycloakAPI {
         return monoResponse.block();
     }
 
-    public ResponseEntity<String> getTokenLoginByUser(String accessToken, UserLoginRequest userLoginRequest){
-
+    public ResponseEntity<String> getTokenLoginByUser(UserLoginRequest userLoginRequest){
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "password");
         formData.add("client_id", clientId);
@@ -133,7 +133,18 @@ public class KeycloakAPI {
         formData.add("username", userLoginRequest.getUsername());
         formData.add("password", userLoginRequest.getPassword());
 
-        Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_LOGIN_USER, realm), accessToken, formData);
+        Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_LOGIN_USER, realm), formData);
+        return monoResponse.block();
+    }
+
+    public ResponseEntity<String> logoutByUserToken(RefreshTokenRequest refreshTokenRequest){
+
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("client_id", clientId);
+        formData.add("client_secret",clientSecret);
+        formData.add("refresh_token", refreshTokenRequest.getRefreshToken());
+
+        Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_LOGOUT_USER, realm), formData);
         return monoResponse.block();
     }
 
@@ -141,11 +152,10 @@ public class KeycloakAPI {
         return  getRolesBySearch(accessToken, "student");
     }
 
-    private ResponseEntity<String>  getRolesBySearch(String accessToken, String roleName){
-      Mono<ResponseEntity<String>> mono = get(String.format(URI_ROLES_SEARCH, this.realm, roleName), accessToken);
-      return mono.block();
+    private ResponseEntity<String>  getRolesBySearch(String accessToken, String roleName) {
+        Mono<ResponseEntity<String>> mono = get(String.format(URI_ROLES_SEARCH, this.realm, roleName), accessToken);
+        return mono.block();
     }
-
 
     private JsonNode executeTokenPost(String uri, String body){
         return webClient.post()
@@ -173,10 +183,9 @@ public class KeycloakAPI {
                 );
     }
 
-    private Mono<ResponseEntity<String>> post(String uri,String token, MultiValueMap<String, String> formData){
+    private Mono<ResponseEntity<String>> post(String uri, MultiValueMap<String, String> formData){
         return webClient.post()
                 .uri(uri)
-                .header("Authorization", setBearerToken(token))
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .bodyValue(formData)
                 .exchangeToMono(response ->
