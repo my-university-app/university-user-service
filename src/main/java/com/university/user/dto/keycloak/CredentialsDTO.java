@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class Credentials {
+public class CredentialsDTO {
     @NotBlank
     private String type;
     @NotBlank

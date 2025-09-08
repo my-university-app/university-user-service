@@ -1,14 +1,12 @@
-package com.university.user.dto.keycloak;
+package com.university.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 @Builder
-public class User {
+public class UserResponse {
     @NotBlank
     private String username;
     @NotBlank
@@ -17,7 +15,4 @@ public class User {
     private String lastName;
     @NotBlank
     private String email;
-    @NotBlank
-    private Boolean enabled;
-    private List<Credentials> credentials;
 }

@@ -5,14 +5,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.university.user.dto.UserRequest;
-import com.university.user.dto.keycloak.Credentials;
-import com.university.user.dto.keycloak.User;
+import com.university.user.dto.keycloak.*;
 import com.university.user.util.ConverterJSON;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
@@ -22,10 +24,12 @@ import java.util.List;
 public class KeycloakAPI {
     private static final Logger log = LoggerFactory.getLogger(KeycloakAPI.class);
     private static String URI_TOKEN = "/realms/%s/protocol/openid-connect/token";
-    private static String BODY_TOKEN = "grant_type=client_credentials&client_id={CLIENT_ID}&client_secret={CLIENT_SECRET}";
-    private static String URI_USER = "/admin/realms/{REALM}/users";
+    private static String BODY_TOKEN = "grant_type=client_credentials&client_id=%s&client_secret=%s";
+    private static String URI_USER = "/admin/realms/%s/users";
+    private static String URI_ROLES_SEARCH = "/admin/realms/%s/roles/%s";
+    private static String URL_ROLES_ADD_USER = "/admin/realms/%s/users/%s/role-mappings/realm";
 
-    private static String AUTHORIZATION_TOKEN = "Bearer {TOKEN}";
+    private static String AUTHORIZATION_TOKEN = "Bearer %s";
 
     private final WebClient webClient;
     private final String serverUrl;
@@ -50,27 +54,23 @@ public class KeycloakAPI {
     public String getAdminAccessToken()
     {
         String tokenUrl = String.format(URI_TOKEN, realm);
-        String body = BODY_TOKEN
-                .replace("{CLIENT_ID}", clientId)
-                .replace("{CLIENT_SECRET}", clientSecret);
-        JsonNode res = executeAdminPost(tokenUrl,body);
+        String body = String.format(BODY_TOKEN, clientId,clientSecret);
+        JsonNode res = executeTokenPost(tokenUrl,body);
         if (res == null || res.get("access_token") == null) throw new RuntimeException("Não foi possível obter token admin do Keycloak");
         return res.get("access_token").asText();
     }
 
-    public void createUser(String accessToken, UserRequest userRequest) throws JsonProcessingException {
+    public ResponseEntity<String> createUser(String accessToken, UserRequest userRequest) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
-        List<Credentials> list = new ArrayList<>();
-        String url = URI_USER.replace("{REALM}", realm);
-        String authorizationToken = AUTHORIZATION_TOKEN.replace("{TOKEN}", accessToken);
+        List<CredentialsDTO> list = new ArrayList<>();
 
-        Credentials credentials = Credentials.builder()
+        CredentialsDTO credentialsDTO = CredentialsDTO.builder()
                 .type("password ")
                 .value(userRequest.getPassword())
                 .temporary(false).build();
-        list.add(credentials);
+        list.add(credentialsDTO);
 
-        User user = User.builder()
+        UserDTO userDTO = UserDTO.builder()
                 .username(userRequest.getUsername())
                 .email(userRequest.getEmail())
                 .firstName(userRequest.getFirstName())
@@ -79,12 +79,59 @@ public class KeycloakAPI {
                 .credentials(list)
                 .build();
 
-        executePost(url, authorizationToken, ConverterJSON.toString(user));
+        Mono<ResponseEntity<String>> monoResponse = post(getRealmFromURL(),
+                accessToken,
+                ConverterJSON.toString(userDTO))
+                .onErrorResume(WebClientResponseException.class, ex -> {
+                    return  Mono.just(ResponseEntity
+                            .status(ex.getRawStatusCode())
+                            .headers(ex.getHeaders())
+                            .body(ex.getResponseBodyAsString()));
+                });
 
+        ResponseEntity<String> response =  monoResponse.block();
+        log.info("HTTP Status (from ResponseEntity): " + response.getStatusCode());
+        log.info("Headers (from ResponseEntity): " + response.getHeaders());
+        log.info("Response Body (from ResponseEntity): " + response.getBody());
+        return response;
     }
 
+    public ResponseEntity<String> setupRoleByUser(String accessToken, String userId) {
+        RoleDTO roleDTO = null;
+        ResponseEntity<String> responseRole = getRolesBySearch(accessToken);
 
-    private JsonNode executeAdminPost(String uri, String body){
+        if(responseRole.getStatusCode().is2xxSuccessful()){
+            JsonNode json = ConverterJSON.toJSONObject(responseRole.getBody());
+            roleDTO = ConverterJSON.toEntity(responseRole.getBody(), RoleDTO.class);
+            log.info("Converted to roleDTO: "+ roleDTO.toString());
+        }
+
+        RoleMappingDTO roleMappingDTO = RoleMappingDTO.builder()
+                .id(roleDTO.getId())
+                .name(roleDTO.getName())
+                .build();
+
+        List<RoleMappingDTO> rolesMapping = new ArrayList<>();
+        rolesMapping.add(roleMappingDTO);
+
+        Mono<ResponseEntity<String>> monoResponse = post(
+                String.format(URL_ROLES_ADD_USER,realm, userId),
+                accessToken,
+                ConverterJSON.toString(rolesMapping));
+
+        return monoResponse.block();
+    }
+
+    private ResponseEntity<String> getRolesBySearch(String accessToken){
+        return  getRolesBySearch(accessToken, "student");
+    }
+
+    private ResponseEntity<String>  getRolesBySearch(String accessToken, String roleName){
+      Mono<ResponseEntity<String>> mono = get(String.format(URI_ROLES_SEARCH, this.realm, roleName), accessToken);
+      return mono.block();
+    }
+
+    private JsonNode executeTokenPost(String uri, String body){
         return webClient.post()
                 .uri(uri)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -94,22 +141,44 @@ public class KeycloakAPI {
                 .block();
     }
 
-    private String executePost(String uri,String token, String body){
+    private Mono<ResponseEntity<String>> post(String uri, String token, String body){
         return webClient.post()
                 .uri(uri)
-                .header("Authorization", token)
+                .header("Authorization", setBearerToken(token))
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
-                .exchangeToMono( response -> {
-                    if(response.statusCode().is2xxSuccessful()){
-                        String location = response.headers().asHttpHeaders().getFirst("Location");
-                        log.info("User created successfully. Location {}", location);
-                        return Mono.just(location);
-                    } else {
-                        log.error("Failed to create the user. status: {}", response.statusCode());
-                        return response.bodyToMono(String.class);
-                    }
-                })
-                .block();
+                .retrieve()
+                .toEntity(String.class);
     }
+
+
+    public Mono<ResponseEntity<String>> get(String uri,String token, MultiValueMap<String, String> params) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .queryParams(params)
+                        .path(uri)
+                        .build())
+                .header("Authorization", setBearerToken(token))
+                .retrieve()
+                .toEntity(String.class);
+    }
+
+    public Mono<ResponseEntity<String>> get(String uri,String token) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path(uri)
+                        .build())
+                .header("Authorization", setBearerToken(token))
+                .retrieve()
+                .toEntity(String.class);
+    }
+
+    private String getRealmFromURL() {
+        return String.format(URI_USER, realm);
+    }
+
+    private String setBearerToken(String token) {
+        return String.format(AUTHORIZATION_TOKEN,token);
+    }
+
 }

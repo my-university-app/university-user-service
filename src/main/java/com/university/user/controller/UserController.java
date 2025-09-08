@@ -2,6 +2,7 @@ package com.university.user.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.university.user.dto.UserRequest;
+import com.university.user.dto.UserResponse;
 import com.university.user.service.KeycloakAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,13 +26,18 @@ public class UserController {
 
     @Operation(summary = "Create new user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The user was create"),
+            @ApiResponse(responseCode = "201", description = "The user was create"),
             @ApiResponse(responseCode = "500", description = "the error server intern")
     })
     @PostMapping()
     public ResponseEntity<?> register(@Validated @RequestBody UserRequest userRequest) throws JsonProcessingException {
         keycloakAdminService.createStudentUser(userRequest);
-        return ResponseEntity.ok(userRequest);
+        return ResponseEntity.ok(UserResponse.builder()
+                .firstName(userRequest.getFirstName())
+                .lastName(userRequest.getLastName())
+                .username(userRequest.getUsername())
+                .email(userRequest.getEmail())
+                .build());
     }
 
 }
