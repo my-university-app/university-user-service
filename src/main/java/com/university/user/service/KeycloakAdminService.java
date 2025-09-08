@@ -58,28 +58,4 @@ public class KeycloakAdminService {
        }
 
     }
-
-
-//    public void assignRoleToUser(String userId, String roleName) {
-//        String token = obtainAdminAccessToken();
-//        // obter representação do role
-//        JsonNode role = webClient.get()
-//                .uri("/admin/realms/" + realm + "/roles/" + roleName)
-//                .header("Authorization", "Bearer " + token)
-//                .retrieve()
-//                .bodyToMono(JsonNode.class)
-//                .block();
-//        if (role == null) throw new RuntimeException("Role não encontrado: " + roleName);
-//
-//        // o payload para atribuição é a representação do role
-//        webClient.post()
-//                .uri("/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm")
-//                .header("Authorization", "Bearer " + token)
-//                .contentType(MediaType.APPLICATION_JSON)
-//                .bodyValue(List.of(role))
-//                .retrieve()
-//                .toBodilessEntity()
-//                .block();
-//    }
-
 }
