@@ -4,9 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.university.user.dto.UserRequest;
+import com.university.user.dto.keycloak.UserLoginRequest;
+import com.university.user.dto.keycloak.UserTokenResponse;
 import com.university.user.exception.UserExistException;
+import com.university.user.exception.UserLoginInvalid;
 import com.university.user.util.ConverterJSON;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -52,10 +56,31 @@ public class KeycloakAdminService {
        status = entityResponse.getStatusCode();
        if(status.is2xxSuccessful()){
            log.info(
-                   String.format("UserId[%s] atualizado roles com sucesso",
+                   String.format("UserId[%s] roles updated",
                            userId)
            );
        }
 
+    }
+
+    public UserTokenResponse getLoginByUser(UserLoginRequest userLoginRequest){
+       UserTokenResponse userTokenResponse = null;
+       String token = keycloakAPI.getAdminAccessToken();
+
+       ResponseEntity<String> response = keycloakAPI.getTokenLoginByUser(token, userLoginRequest);
+
+       HttpStatusCode statusCode = response.getStatusCode();
+
+       if(statusCode.is2xxSuccessful()){
+            log.info("Login success: "+ response.getBody());
+            userTokenResponse = ConverterJSON.toEntity(response.getBody(), UserTokenResponse.class);
+       }
+
+       if (statusCode.is4xxClientError()){
+           log.info("user invalid: "+userLoginRequest.username);
+           String message = ConverterJSON.toJSONObject(response.getBody()).get("error_description").asText();
+           throw new UserLoginInvalid(message);
+       }
+       return userTokenResponse;
     }
 }
