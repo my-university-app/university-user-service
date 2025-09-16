@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.ResponseEntity;
 
 public class ConverterJSON {
     public static String toString(Object object) {
@@ -33,5 +34,9 @@ public class ConverterJSON {
         } catch (JsonProcessingException e) {
             return null;
         }
+    }
+
+    public static String jsonByField(ResponseEntity<?> response, String fieldName){
+        return ConverterJSON.toJSONObject(String.valueOf(response.getBody())).get(fieldName).asText();
     }
 }
