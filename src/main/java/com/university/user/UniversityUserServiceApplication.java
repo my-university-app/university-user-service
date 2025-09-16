@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class UniversityUserServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(UniversityUserServiceApplication.class, args);
+        System.setProperty("spring.mvc.throw-exception-if-no-handler-found", "true");
+        SpringApplication.run(UniversityUserServiceApplication.class, args);
+
 	}
 
 }

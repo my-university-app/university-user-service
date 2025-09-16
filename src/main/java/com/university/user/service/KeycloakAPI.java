@@ -31,6 +31,7 @@ public class KeycloakAPI {
     private static String URL_ROLES_ADD_USER = "/admin/realms/%s/users/%s/role-mappings/realm";
     private static String URL_LOGIN_USER = "/realms/%s/protocol/openid-connect/token";
     private static String URL_LOGOUT_USER = "/realms/%s/protocol/openid-connect/logout";
+    private static String URL_TOKEN_VALIDATE = "/realms/%s/protocol/openid-connect/token/introspect";
 
     private static String AUTHORIZATION_TOKEN = "Bearer %s";
 
@@ -145,6 +146,16 @@ public class KeycloakAPI {
         formData.add("refresh_token", refreshTokenRequest.getRefreshToken());
 
         Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_LOGOUT_USER, realm), formData);
+        return monoResponse.block();
+    }
+
+    public ResponseEntity<String> validateTokenByUser(String token ){
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("client_id", clientId);
+        formData.add("client_secret",clientSecret);
+        formData.add("token", token);
+
+        Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_TOKEN_VALIDATE, realm), formData);
         return monoResponse.block();
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.university.user.dto.UserRequest;
+import com.university.user.dto.ValidateTokenResponse;
 import com.university.user.dto.keycloak.RefreshTokenRequest;
 import com.university.user.dto.keycloak.UserLoginRequest;
 import com.university.user.dto.keycloak.UserTokenResponse;
@@ -95,7 +96,20 @@ public class KeycloakAdminService {
         }
     }
 
+    public Object validateToken(String token) {
+        UserTokenResponse userTokenResponse = null;
+        ResponseEntity<String> response = keycloakAPI.validateTokenByUser(token);
+
+        return ValidateTokenResponse.builder()
+                .active(Boolean.valueOf(
+                        ConverterJSON.jsonByField(response,"active")
+                )).build();
+
+    }
+
     private String getMessageByError( ResponseEntity<String> response){
         return ConverterJSON.toJSONObject(response.getBody()).get("error_description").asText();
     }
+
+
 }
