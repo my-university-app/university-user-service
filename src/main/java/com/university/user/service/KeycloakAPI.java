@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.university.user.dto.AuthLoginRequest;
 import com.university.user.dto.UserRequest;
 import com.university.user.dto.keycloak.*;
 import com.university.user.util.ConverterJSON;
@@ -32,6 +33,7 @@ public class KeycloakAPI {
     private static String URL_LOGIN_USER = "/realms/%s/protocol/openid-connect/token";
     private static String URL_LOGOUT_USER = "/realms/%s/protocol/openid-connect/logout";
     private static String URL_TOKEN_VALIDATE = "/realms/%s/protocol/openid-connect/token/introspect";
+    private static String URL_REFRESH_TOKEN = "/realms/%s/protocol/openid-connect/token";
 
     private static String AUTHORIZATION_TOKEN = "Bearer %s";
 
@@ -126,13 +128,13 @@ public class KeycloakAPI {
         return monoResponse.block();
     }
 
-    public ResponseEntity<String> getTokenLoginByUser(UserLoginRequest userLoginRequest){
+    public ResponseEntity<String> getTokenLoginByUser(AuthLoginRequest authLoginRequest){
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "password");
         formData.add("client_id", clientId);
         formData.add("client_secret",clientSecret);
-        formData.add("username", userLoginRequest.getUsername());
-        formData.add("password", userLoginRequest.getPassword());
+        formData.add("username", authLoginRequest.getUsername());
+        formData.add("password", authLoginRequest.getPassword());
 
         Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_LOGIN_USER, realm), formData);
         return monoResponse.block();
@@ -156,6 +158,17 @@ public class KeycloakAPI {
         formData.add("token", token);
 
         Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_TOKEN_VALIDATE, realm), formData);
+        return monoResponse.block();
+    }
+
+    public ResponseEntity<String> refreshTokenByUser(String refreshToken) {
+        MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+        formData.add("grant_type", "refresh_token");
+        formData.add("client_id", clientId);
+        formData.add("client_secret",clientSecret);
+        formData.add("refresh_token", refreshToken);
+
+        Mono<ResponseEntity<String>> monoResponse = post(String.format(URL_REFRESH_TOKEN, realm), formData);
         return monoResponse.block();
     }
 
@@ -250,5 +263,4 @@ public class KeycloakAPI {
     private String setBearerToken(String token) {
         return String.format(AUTHORIZATION_TOKEN,token);
     }
-
 }

@@ -6,8 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.university.user.dto.UserRequest;
 import com.university.user.dto.ValidateTokenResponse;
 import com.university.user.dto.keycloak.RefreshTokenRequest;
-import com.university.user.dto.keycloak.UserLoginRequest;
-import com.university.user.dto.keycloak.UserTokenResponse;
+import com.university.user.dto.AuthLoginRequest;
+import com.university.user.dto.AuthTokenResponse;
+import com.university.user.exception.RefreshTokenInvalidException;
 import com.university.user.exception.UserExistException;
 import com.university.user.exception.UserLoginInvalidException;
 import com.university.user.util.ConverterJSON;
@@ -64,25 +65,25 @@ public class KeycloakAdminService {
 
     }
 
-    public UserTokenResponse getLoginByUser(UserLoginRequest userLoginRequest){
-       UserTokenResponse userTokenResponse = null;
-       ResponseEntity<String> response = keycloakAPI.getTokenLoginByUser(userLoginRequest);
+    public AuthTokenResponse getLoginByUser(AuthLoginRequest authLoginRequest){
+       AuthTokenResponse authTokenResponse = null;
+       ResponseEntity<String> response = keycloakAPI.getTokenLoginByUser(authLoginRequest);
        HttpStatusCode statusCode = response.getStatusCode();
 
        if(statusCode.is2xxSuccessful()){
             log.info("Login success: "+ response.getBody());
-            userTokenResponse = ConverterJSON.toEntity(response.getBody(), UserTokenResponse.class);
+            authTokenResponse = ConverterJSON.toEntity(response.getBody(), AuthTokenResponse.class);
        }
 
        if (statusCode.is4xxClientError()){
-           log.info("user invalid: "+userLoginRequest.username);
+           log.info("user invalid: "+ authLoginRequest.username);
            throw new UserLoginInvalidException(getMessageByError(response));
        }
-       return userTokenResponse;
+       return authTokenResponse;
     }
 
     public void logoutByUser(RefreshTokenRequest refreshToken){
-        UserTokenResponse userTokenResponse = null;
+        AuthTokenResponse authTokenResponse = null;
         ResponseEntity<String> response = keycloakAPI.logoutByUserToken(refreshToken);
         HttpStatusCode statusCode = response.getStatusCode();
 
@@ -96,8 +97,8 @@ public class KeycloakAdminService {
         }
     }
 
-    public Object validateToken(String token) {
-        UserTokenResponse userTokenResponse = null;
+    public ValidateTokenResponse validateToken(String token) {
+        AuthTokenResponse authTokenResponse = null;
         ResponseEntity<String> response = keycloakAPI.validateTokenByUser(token);
 
         return ValidateTokenResponse.builder()
@@ -105,6 +106,23 @@ public class KeycloakAdminService {
                         ConverterJSON.jsonByField(response,"active")
                 )).build();
 
+    }
+
+    public AuthTokenResponse refreshTokenByUser(RefreshTokenRequest refreshTokenRequest){
+       AuthTokenResponse authTokenResponse = null;
+       ResponseEntity<String> response = keycloakAPI.refreshTokenByUser(refreshTokenRequest.getRefreshToken());
+       HttpStatusCode statusCode = response.getStatusCode();
+
+       if(statusCode.is2xxSuccessful()){
+           log.info("refresh token success: "+ response.getBody());
+           authTokenResponse = ConverterJSON.toEntity(response.getBody(), AuthTokenResponse.class);
+       }
+
+       if (statusCode.is4xxClientError()){
+           log.info("Invalid refresh token: "+refreshTokenRequest.getRefreshToken());
+           throw new RefreshTokenInvalidException(getMessageByError(response));
+       }
+       return authTokenResponse;
     }
 
     private String getMessageByError( ResponseEntity<String> response){
