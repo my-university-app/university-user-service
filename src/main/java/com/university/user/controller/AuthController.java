@@ -5,7 +5,7 @@ import com.university.user.dto.UserRequest;
 import com.university.user.dto.UserResponse;
 import com.university.user.dto.ValidateTokenRequest;
 import com.university.user.dto.keycloak.RefreshTokenRequest;
-import com.university.user.dto.keycloak.UserLoginRequest;
+import com.university.user.dto.AuthLoginRequest;
 import com.university.user.service.KeycloakAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -43,8 +43,8 @@ public class AuthController {
     }
 
     @PostMapping("login")
-    public ResponseEntity<?> loginUser(@Validated @RequestBody UserLoginRequest userLoginRequest) {
-        return ResponseEntity.ok(keycloakAdminService.getLoginByUser(userLoginRequest));
+    public ResponseEntity<?> loginUser(@Validated @RequestBody AuthLoginRequest authLoginRequest) {
+        return ResponseEntity.ok(keycloakAdminService.getLoginByUser(authLoginRequest));
     }
 
     @PostMapping("logout")
@@ -56,6 +56,11 @@ public class AuthController {
     @PostMapping("validate")
     public ResponseEntity<?> validateToken(@RequestBody @Valid ValidateTokenRequest validateTokenRequest) {
       return ResponseEntity.ok(keycloakAdminService.validateToken(validateTokenRequest.getToken()));
+    }
+
+    @PostMapping("refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody @Valid RefreshTokenRequest refreshTokenRequest) {
+        return ResponseEntity.ok(keycloakAdminService.refreshTokenByUser(refreshTokenRequest));
     }
 
 }

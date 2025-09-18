@@ -1,13 +1,11 @@
-package com.university.user.dto.keycloak;
+package com.university.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
-import lombok.Builder;
 import lombok.Data;
 
 @Data
 //@Builder
-public class UserTokenResponse {
+public class AuthTokenResponse {
     @JsonProperty("access_token")
     private String accessToken;
 
@@ -31,7 +29,4 @@ public class UserTokenResponse {
 
     @JsonProperty("scope")
     private String scope;
-
-//    @JsonPOJOBuilder(withPrefix = "")
-//    public static class RoleDTOBuilder {}
 }
